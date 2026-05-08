@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const verifyToken = require("../middleware/verifyToken");
 
+// create new user account
 router.post("/register", async (req, res) => {
   try {
     const salt = await bcrypt.genSalt(10);
@@ -14,13 +15,14 @@ router.post("/register", async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json(err); }
 });
 
+// verify user and login
 router.post("/login", async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (!user || !(await bcrypt.compare(req.body.password, user.password)))
       return res.status(401).json("Wrong credentials!");
 
-
+    // generate secure session token
     const token = jwt.sign(
       {
         id: user._id,
@@ -35,11 +37,13 @@ router.post("/login", async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json(err); }
 });
 
+// fetch all registered users
 router.get("/all-users",verifyToken, async (req, res) => {
   try { res.status(200).json(await User.find({}, { password: 0 })); }
   catch (err) { console.error(err); res.status(500).json(err); }
 });
 
+// update user skill list
 router.put("/update-skills/:id", async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });

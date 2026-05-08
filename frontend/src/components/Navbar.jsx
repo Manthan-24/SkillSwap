@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 
+// connect to live server
 const socket = io("http://localhost:5000");
 
 const Navbar = () => {
@@ -10,27 +11,23 @@ const Navbar = () => {
   const [hasNotif, setHasNotif] = useState(false);
 
   useEffect(() => {
+    // keep user data synced
     const sync = () => setUser(JSON.parse(localStorage.getItem("user")));
     window.addEventListener("storage", sync);
 
     if (user?._id) {
       socket.emit("join_room", user._id);
 
-      // Listener for New Request Notifications
+      // show new request alerts
       socket.on("new_notification", (data) => {
         setHasNotif(true);
         alert(data.message);
       });
 
-      // --- ADDED: REAL-TIME CREDIT SYNC ---
+      // update stars in real-time
       socket.on("update_credits", (data) => {
-        // 1. Update the physical storage
         localStorage.setItem("user", JSON.stringify(data.updatedUser));
-        
-        // 2. Update the local state to change the UI immediately
         setUser(data.updatedUser);
-        
-        // 3. (Optional) Visual feedback
         console.log("Wallet Updated:", data.updatedUser.credits);
       });
     }
@@ -38,7 +35,7 @@ const Navbar = () => {
     return () => {
       window.removeEventListener("storage", sync);
       socket.off("new_notification");
-      socket.off("update_credits"); // Clean up listener
+      socket.off("update_credits");
     };
   }, [user?._id]);
 
@@ -60,7 +57,7 @@ const Navbar = () => {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {/* THE REAL-TIME STAR WALLET */}
+          {/* user star balance display */}
           <div style={{ background: '#e0f7ff', padding: '10px 20px', borderRadius: '25px', border: '3px solid #b3e5fc' }}>
             <span style={{ fontWeight: '900', color: '#0288d1', fontSize: '18px' }}>✨ {user.credits} Stars</span>
           </div>

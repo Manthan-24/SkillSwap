@@ -4,6 +4,7 @@ const Request = require("../models/Request");
 const User = require("../models/User");
 const verifyToken = require("../middleware/verifyToken");
 
+// send new swap request
 router.post("/send", verifyToken, async (req, res) => {
   const io = req.app.get("socketio");
   try {
@@ -18,6 +19,7 @@ router.post("/send", verifyToken, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json(err); }
 });
 
+// fetch user mailbox data
 router.get("/my-inbox/:userId", verifyToken, async (req, res) => {
   try {
     const data = await Request.find({ $or: [{ receiverId: req.params.userId }, { senderId: req.params.userId }] })
@@ -26,7 +28,7 @@ router.get("/my-inbox/:userId", verifyToken, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json(err); }
 });
 
-// --- UPDATED FOR REAL-TIME CREDITS ---
+// handle request status updates
 router.put("/update/:id", verifyToken, async (req, res) => {
   const io = req.app.get("socketio");
   try {
@@ -38,14 +40,14 @@ router.put("/update/:id", verifyToken, async (req, res) => {
 
     const request = await Request.findById(req.params.id);
     
-    // 1. Deduct from Student
+    // deduct credit from student
     const updatedStudent = await User.findByIdAndUpdate(
         request.senderId, 
         { $inc: { credits: -1 } }, 
         { new: true }
     );
 
-    // 2. Add to Teacher
+    // add credit to teacher
     const updatedTeacher = await User.findByIdAndUpdate(
         request.receiverId, 
         { $inc: { credits: 1 } }, 
@@ -55,18 +57,18 @@ router.put("/update/:id", verifyToken, async (req, res) => {
     request.status = "accepted";
     await request.save();
 
-    // 3. SOCKET MAGIC: Tell the Student's browser to update credits
+    // sync credits in real-time
     if (io) {
       io.to(request.senderId.toString()).emit("update_credits", { 
         updatedUser: updatedStudent 
       });
     }
 
-    // Return the updated teacher data to the teacher's browser
     res.status(200).json({ updatedUser: updatedTeacher });
   } catch (err) { console.error(err); res.status(500).json(err); }
 });
 
+// remove completed swap session
 router.delete("/end/:id", verifyToken, async (req, res) => {
   try {
     await Request.findByIdAndDelete(req.params.id);

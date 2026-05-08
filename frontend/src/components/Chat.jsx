@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import io from "socket.io-client";
 
+// connect to chat server
 const socket = io("http://localhost:5000");
 
 const Chat = ({ receiverId, receiverName }) => {
@@ -8,6 +9,7 @@ const Chat = ({ receiverId, receiverName }) => {
   const [chatLog, setChatLog] = useState([]);
   const user = JSON.parse(localStorage.getItem("user"));
 
+  // handle real-time messaging
   useEffect(() => {
     if (user?._id) {
       socket.emit("join_room", user._id);
@@ -20,6 +22,7 @@ const Chat = ({ receiverId, receiverName }) => {
     return () => socket.off("receive_message");
   }, [user?._id]);
 
+  // send text to partner
   const sendMessage = () => {
     if (!message.trim()) return;
     const data = { senderId: user._id, receiverId, text: message, senderName: user.name };
@@ -34,7 +37,7 @@ const Chat = ({ receiverId, receiverName }) => {
       background: 'white', borderRadius: '35px', overflow: 'hidden',
       border: '6px solid #e0f7ff', boxShadow: '0 15px 0 0 #f0f9ff'
     }}>
-      {/* Playful Header */}
+      {/* playful chat header */}
       <div style={{ 
         background: '#70d6ff', padding: '15px 20px', color: 'white', 
         display: 'flex', justifyContent: 'space-between', alignItems: 'center'
@@ -52,7 +55,7 @@ const Chat = ({ receiverId, receiverName }) => {
         </button>
       </div>
 
-      {/* Message Area with Bubbles */}
+      {/* message bubble area */}
       <div style={{ 
         flexGrow: 1, overflowY: 'auto', padding: '20px', 
         background: '#fff9fb', display: 'flex', flexDirection: 'column', gap: '12px' 
@@ -79,7 +82,7 @@ const Chat = ({ receiverId, receiverName }) => {
         })}
       </div>
 
-      {/* Input Area */}
+      {/* user message input */}
       <div style={{ padding: '15px', background: 'white', borderTop: '4px solid #f0f9ff', display: 'flex', gap: '10px' }}>
         <input 
           type="text" 

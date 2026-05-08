@@ -9,6 +9,7 @@ const RequestsInbox = () => {
   const [activeChat, setActiveChat] = useState(null);
   const user = JSON.parse(localStorage.getItem("user"));
 
+  // fetch user inbox requests
   const load = useCallback(async (isMounted) => {
     try {
       const res = await axios.get(`http://localhost:5000/api/requests/my-inbox/${user._id}`, getApiConfig());
@@ -31,25 +32,24 @@ const RequestsInbox = () => {
     return () => { isMounted = false; };
   }, [load]);
 
+  // handle accept or reject
   const action = async (id, status) => {
     try {
       const res = await axios.put(`http://localhost:5000/api/requests/update/${id}`, { status }, getApiConfig());
       
       if (status === "accepted") {
-        // 1. Update the local storage with the user who got +1 star (Teacher)
+        // sync local star balance
         localStorage.setItem("user", JSON.stringify(res.data.updatedUser));
-        
-        // 2. Trigger the event so the Navbar updates the Star count immediately
         window.dispatchEvent(new Event("storage"));
       }
       
-      // Refresh the list to show the "CHAT" button
       await load(true);
     } catch (err) {
       console.error("Action Error:", err);
     }
   };
 
+  // delete completed swap session
   const end = async (id) => {
     try {
       await axios.delete(`http://localhost:5000/api/requests/end/${id}`, getApiConfig());
@@ -76,7 +76,7 @@ const RequestsInbox = () => {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '40px', alignItems: 'flex-start' }}>
         
-        {/* LEFT COLUMN: REQUESTS */}
+        {/* display active skill requests */}
         <div style={{ flex: '1', minWidth: '350px', display: 'grid', gap: '25px' }}>
           {requests.length > 0 ? requests.map(req => {
             const isTeacher = req.receiverId._id === user._id;
@@ -99,6 +99,7 @@ const RequestsInbox = () => {
                   </p>
                 </div>
                 
+                {/* buttons for request actions */}
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {req.status === "pending" && isTeacher && (
                     <>
@@ -122,7 +123,7 @@ const RequestsInbox = () => {
           )}
         </div>
 
-        {/* RIGHT COLUMN: CHAT PANEL */}
+        {/* side panel for chat */}
         <div style={{ width: '450px', position: 'sticky', top: '120px' }}>
           {activeChat ? (
             <div className="bubble-card" style={{ border: '8px solid #70d6ff', padding: '0', overflow: 'hidden', borderRadius: '25px' }}>

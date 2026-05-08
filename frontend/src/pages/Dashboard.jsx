@@ -6,24 +6,23 @@ import { getApiConfig } from "../utils/APIUtil";
 const Dashboard = () => {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")));
   const [newSkill, setNewSkill] = useState("");
-  
-  // 1. New state to store the advice from the API
   const [dailyTip, setDailyTip] = useState("Fetching magic wisdom...");
 
-  // 2. useEffect to call the Third-Party API on page load
+  // get daily motivation
   useEffect(() => {
     fetch("https://api.adviceslip.com/advice")
       .then((res) => res.json())
       .then((data) => setDailyTip(data.slip.advice))
       .catch((err) => {
         console.error("API Error:", err);
-        setDailyTip("Believe in your magic! ✨"); // Fallback message
+        setDailyTip("Believe in your magic! ✨");
       });
   }, []);
 
+  // sync skill updates
   const update = async (newList) => {
     try {
-      const res = await axios.put(`http://localhost:5000/api/auth/update-skills/${user._id}`, { skillsOffered: newList },getApiConfig());
+      const res = await axios.put(`http://localhost:5000/api/auth/update-skills/${user._id}`, { skillsOffered: newList }, getApiConfig());
       localStorage.setItem("user", JSON.stringify(res.data));
       setUser(res.data);
       window.dispatchEvent(new Event("storage"));
@@ -32,11 +31,13 @@ const Dashboard = () => {
     }
   };
 
+  // add new superpower
   const add = () => {
     if (newSkill) update([...(user.skillsOffered || []), newSkill]);
     setNewSkill("");
   };
 
+  // remove a skill
   const del = (skill) => update(user.skillsOffered.filter(s => s !== skill));
 
   return (
@@ -48,7 +49,7 @@ const Dashboard = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', alignItems: 'stretch' }}>
         
-        {/* --- 3. MOTIVATION STATION (Powered by Advice API) --- */}
+        {/* external advice section */}
         <div className="bubble-card" style={{ 
           background: 'linear-gradient(135deg, #70d6ff, #009bd6)', 
           color: 'white', 
@@ -77,7 +78,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* SKILL MANAGEMENT CARD */}
+        {/* skill list management */}
         <div className="bubble-card">
           <h3 style={{ marginTop: 0, fontSize: '24px', color: '#444' }}>What's your Superpower? 🦸‍♂️</h3>
           <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
@@ -101,6 +102,7 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* link to marketplace */}
       <div style={{ textAlign: 'center', marginTop: '60px' }}>
         <Link to="/marketplace" className="bouncy-btn btn-sky" style={{ fontSize: '24px', padding: '25px 50px', borderRadius: '30px' }}>
           Go Shopping for Skills! 🛍️
