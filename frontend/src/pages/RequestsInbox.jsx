@@ -11,14 +11,13 @@ const RequestsInbox = () => {
 
   const load = useCallback(async (isMounted) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/requests/my-inbox/${user._id}`,getApiConfig());
+      const res = await axios.get(`http://localhost:5000/api/requests/my-inbox/${user._id}`, getApiConfig());
       if (isMounted) {
         setRequests(res.data);
         setLoading(false);
       }
     } catch (err) {
       if (isMounted) {
-        // Fixed: Using 'err' to prevent linting errors
         console.error("Mailbox Sync Error:", err);
         setLoading(false);
       }
@@ -34,11 +33,17 @@ const RequestsInbox = () => {
 
   const action = async (id, status) => {
     try {
-      const res = await axios.put(`http://localhost:5000/api/requests/update/${id}`, { status },getApiConfig());
+      const res = await axios.put(`http://localhost:5000/api/requests/update/${id}`, { status }, getApiConfig());
+      
       if (status === "accepted") {
+        // 1. Update the local storage with the user who got +1 star (Teacher)
         localStorage.setItem("user", JSON.stringify(res.data.updatedUser));
+        
+        // 2. Trigger the event so the Navbar updates the Star count immediately
         window.dispatchEvent(new Event("storage"));
       }
+      
+      // Refresh the list to show the "CHAT" button
       await load(true);
     } catch (err) {
       console.error("Action Error:", err);
@@ -47,7 +52,7 @@ const RequestsInbox = () => {
 
   const end = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/requests/end/${id}`,getApiConfig());
+      await axios.delete(`http://localhost:5000/api/requests/end/${id}`, getApiConfig());
       setActiveChat(null);
       await load(true);
     } catch (err) {
@@ -82,7 +87,10 @@ const RequestsInbox = () => {
               <div key={req._id} className="bubble-card" style={{ 
                 borderLeft: `15px solid ${isAccepted ? '#99ffd1' : '#ffd670'}`,
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '20px'
+                padding: '20px',
+                background: '#fff',
+                borderRadius: '20px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
               }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '22px' }}>{partner.name} 👤</h3>
@@ -94,21 +102,21 @@ const RequestsInbox = () => {
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {req.status === "pending" && isTeacher && (
                     <>
-                      <button onClick={() => action(req._id, "accepted")} className="bouncy-btn btn-sky" style={{ padding: '10px 20px' }}>YES! ✅</button>
-                      <button onClick={() => action(req._id, "rejected")} className="bouncy-btn btn-pink" style={{ padding: '10px 20px' }}>NO ❌</button>
+                      <button onClick={() => action(req._id, "accepted")} className="bouncy-btn btn-sky" style={{ padding: '10px 20px', cursor: 'pointer' }}>YES! ✅</button>
+                      <button onClick={() => action(req._id, "rejected")} className="bouncy-btn btn-pink" style={{ padding: '10px 20px', cursor: 'pointer' }}>NO ❌</button>
                     </>
                   )}
                   {isAccepted && (
                     <>
-                      <button onClick={() => setActiveChat({ id: partner._id, name: partner.name })} className="bouncy-btn btn-yellow" style={{ padding: '10px 20px' }}>CHAT! 💬</button>
-                      <button onClick={() => end(req._id)} className="bouncy-btn btn-pink" style={{ padding: '10px 15px' }}>End</button>
+                      <button onClick={() => setActiveChat({ id: partner._id, name: partner.name })} className="bouncy-btn btn-yellow" style={{ padding: '10px 20px', cursor: 'pointer' }}>CHAT! 💬</button>
+                      <button onClick={() => end(req._id)} className="bouncy-btn btn-pink" style={{ padding: '10px 15px', cursor: 'pointer' }}>End</button>
                     </>
                   )}
                 </div>
               </div>
             );
           }) : (
-            <div className="bubble-card" style={{ textAlign: 'center', opacity: 0.6, borderStyle: 'dashed' }}>
+            <div className="bubble-card" style={{ textAlign: 'center', opacity: 0.6, borderStyle: 'dashed', padding: '40px' }}>
               <p style={{ fontSize: '20px', fontWeight: '700' }}>No mail yet! 🕸️ Go swap some skills!</p>
             </div>
           )}
@@ -117,7 +125,7 @@ const RequestsInbox = () => {
         {/* RIGHT COLUMN: CHAT PANEL */}
         <div style={{ width: '450px', position: 'sticky', top: '120px' }}>
           {activeChat ? (
-            <div className="bubble-card" style={{ border: '8px solid #70d6ff', padding: '0', overflow: 'hidden' }}>
+            <div className="bubble-card" style={{ border: '8px solid #70d6ff', padding: '0', overflow: 'hidden', borderRadius: '25px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 20px', background: '#70d6ff', color: 'white' }}>
                 <span style={{ fontWeight: '900' }}>Talking to: {activeChat.name}</span>
                 <button onClick={() => setActiveChat(null)} style={{ border: 'none', background: 'white', borderRadius: '50%', width: '25px', height: '25px', cursor: 'pointer', fontWeight: 'bold' }}>×</button>
@@ -125,7 +133,7 @@ const RequestsInbox = () => {
               <Chat receiverId={activeChat.id} receiverName={activeChat.name} />
             </div>
           ) : (
-            <div className="bubble-card" style={{ textAlign: 'center', background: '#fdfdfd', border: '5px dashed #ccc', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="bubble-card" style={{ textAlign: 'center', background: '#fdfdfd', border: '5px dashed #ccc', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '25px' }}>
               <p style={{ fontWeight: '700', color: '#bbb', textTransform: 'uppercase', letterSpacing: '1px' }}>Select a chat to<br/>start talking! 🗣️</p>
             </div>
           )}

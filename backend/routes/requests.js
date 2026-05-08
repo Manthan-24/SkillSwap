@@ -4,7 +4,7 @@ const Request = require("../models/Request");
 const User = require("../models/User");
 const verifyToken = require("../middleware/verifyToken");
 
-router.post("/send", verifyToken,async (req, res) => {
+router.post("/send", verifyToken, async (req, res) => {
   const io = req.app.get("socketio");
   try {
     const sender = await User.findById(req.body.senderId);
@@ -18,7 +18,7 @@ router.post("/send", verifyToken,async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json(err); }
 });
 
-router.get("/my-inbox/:userId",verifyToken, async (req, res) => {
+router.get("/my-inbox/:userId", verifyToken, async (req, res) => {
   try {
     const data = await Request.find({ $or: [{ receiverId: req.params.userId }, { senderId: req.params.userId }] })
       .populate("senderId receiverId", "name");
@@ -26,19 +26,44 @@ router.get("/my-inbox/:userId",verifyToken, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json(err); }
 });
 
-router.put("/update/:id", verifyToken,async (req, res) => {
+// --- UPDATED FOR REAL-TIME CREDITS ---
+router.put("/update/:id", verifyToken, async (req, res) => {
+  const io = req.app.get("socketio");
   try {
     const { status } = req.body;
     if (status === "rejected") {
       await Request.findByIdAndDelete(req.params.id);
       return res.status(200).json("Request removed.");
     }
+
     const request = await Request.findById(req.params.id);
-    await User.findByIdAndUpdate(request.senderId, { $inc: { credits: -1 } });
-    const teacher = await User.findByIdAndUpdate(request.receiverId, { $inc: { credits: 1 } }, { new: true });
+    
+    // 1. Deduct from Student
+    const updatedStudent = await User.findByIdAndUpdate(
+        request.senderId, 
+        { $inc: { credits: -1 } }, 
+        { new: true }
+    );
+
+    // 2. Add to Teacher
+    const updatedTeacher = await User.findByIdAndUpdate(
+        request.receiverId, 
+        { $inc: { credits: 1 } }, 
+        { new: true }
+    );
+
     request.status = "accepted";
     await request.save();
-    res.status(200).json({ updatedUser: teacher });
+
+    // 3. SOCKET MAGIC: Tell the Student's browser to update credits
+    if (io) {
+      io.to(request.senderId.toString()).emit("update_credits", { 
+        updatedUser: updatedStudent 
+      });
+    }
+
+    // Return the updated teacher data to the teacher's browser
+    res.status(200).json({ updatedUser: updatedTeacher });
   } catch (err) { console.error(err); res.status(500).json(err); }
 });
 

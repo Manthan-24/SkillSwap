@@ -12,16 +12,33 @@ const Navbar = () => {
   useEffect(() => {
     const sync = () => setUser(JSON.parse(localStorage.getItem("user")));
     window.addEventListener("storage", sync);
+
     if (user?._id) {
       socket.emit("join_room", user._id);
+
+      // Listener for New Request Notifications
       socket.on("new_notification", (data) => {
         setHasNotif(true);
         alert(data.message);
       });
+
+      // --- ADDED: REAL-TIME CREDIT SYNC ---
+      socket.on("update_credits", (data) => {
+        // 1. Update the physical storage
+        localStorage.setItem("user", JSON.stringify(data.updatedUser));
+        
+        // 2. Update the local state to change the UI immediately
+        setUser(data.updatedUser);
+        
+        // 3. (Optional) Visual feedback
+        console.log("Wallet Updated:", data.updatedUser.credits);
+      });
     }
-    return () => { 
-      window.removeEventListener("storage", sync); 
-      socket.off("new_notification"); 
+
+    return () => {
+      window.removeEventListener("storage", sync);
+      socket.off("new_notification");
+      socket.off("update_credits"); // Clean up listener
     };
   }, [user?._id]);
 
@@ -43,12 +60,15 @@ const Navbar = () => {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          {/* THE REAL-TIME STAR WALLET */}
           <div style={{ background: '#e0f7ff', padding: '10px 20px', borderRadius: '25px', border: '3px solid #b3e5fc' }}>
             <span style={{ fontWeight: '900', color: '#0288d1', fontSize: '18px' }}>✨ {user.credits} Stars</span>
           </div>
-          <Link to="/inbox" style={{ fontSize: '30px', position: 'relative', textDecoration: 'none' }}>
+          
+          <Link to="/inbox" onClick={() => setHasNotif(false)} style={{ fontSize: '30px', position: 'relative', textDecoration: 'none' }}>
             📬 {hasNotif && <span style={{ position: 'absolute', top: 0, right: -5, height: '14px', width: '14px', background: '#ff5252', borderRadius: '50%', border: '3px solid white', animation: 'bounce 1s infinite' }} />}
           </Link>
+          
           <button onClick={() => {localStorage.clear(); navigate("/login")}} className="bouncy-btn btn-pink" style={{ padding: '10px 20px' }}>Bye-Bye!</button>
         </div>
       </div>
